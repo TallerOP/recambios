@@ -1,77 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Escáner de Recambios Profesional</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #reader { width: 100%; max-width: 400px; margin: auto; }
-    #resultado { margin-top: 10px; white-space: pre-line; }
-    #formulario { display: none; margin-top: 20px; }
-  </style>
+<title>Inventario Profesional</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body{font-family:Arial, sans-serif;margin:20px;background:#f0f4f8;color:#333;}
+h2{text-align:center;font-size:2em;margin-bottom:20px;color:#1f2937;}
+#reader{width:100%;max-width:450px;margin:auto 0 20px;border:2px solid #3b82f6;border-radius:10px;}
+#formulario{display:none;max-width:500px;margin:0 auto 20px;padding:20px;background:#ffffffdd;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,0.1);}
+#formulario label{display:block;margin-bottom:5px;font-weight:600;font-size:1.1em;}
+#formulario input,#formulario select{width:100%;padding:8px 10px;margin-bottom:15px;font-size:1.1em;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;}
+#formulario button{background:#3b82f6;color:white;border:none;padding:12px 20px;font-size:1.2em;border-radius:6px;width:100%;cursor:pointer;transition:0.3s;}
+#formulario button:hover{background:#2563eb;}
+#resultado{text-align:center;font-size:1.2em;margin-bottom:30px;}
+#dashboard{max-width:800px;margin:0 auto;text-align:center;}
+#dashboard button{background:#10b981;color:white;border:none;padding:10px 16px;font-size:1.1em;border-radius:6px;cursor:pointer;margin-bottom:15px;transition:0.3s;}
+#dashboard button:hover{background:#059669;}
+#tablaDashboard{width:100%;border-collapse:collapse;font-size:1.05em;background:#ffffffdd;border-radius:10px;overflow:hidden;}
+#tablaDashboard th,#tablaDashboard td{border:1px solid #ccc;padding:10px;text-align:center;}
+#tablaDashboard th{background:#3b82f6;color:white;font-size:1.1em;}
+#tablaDashboard tr:nth-child(even){background:#f3f4f6;}
+</style>
 </head>
 <body>
 
-<h2>Escanear código de recambio</h2>
-
+<h2>Escanear Recambios</h2>
 <div id="reader"></div>
 
 <div id="formulario">
-  <label>Tipo:</label>
-  <select id="tipo">
-    <option value="entrada">Entrada</option>
-    <option value="salida">Salida</option>
-  </select><br><br>
-
-  <label>Cantidad:</label>
-  <input type="number" id="cantidad" value="1"><br><br>
-
-  <label>Orden de Trabajo:</label>
-  <input type="text" id="ot"><br><br>
-
-  <label>Comentario:</label>
-  <input type="text" id="comentario"><br><br>
-
-  <label>Usuario:</label>
-  <input type="text" id="usuario_id" placeholder="Ej: op01"><br><br>
-
-  <button onclick="registrarMovimiento()">Registrar</button>
+<label>Tipo:</label>
+<select id="tipo"><option value="entrada">Entrada</option><option value="salida">Salida</option></select>
+<label>Cantidad:</label><input type="number" id="cantidad" value="1">
+<label>Orden de Trabajo:</label><input type="text" id="ot">
+<label>Comentario:</label><input type="text" id="comentario">
+<label>Usuario:</label><input type="text" id="usuario_id" placeholder="op01">
+<button onclick="registrarMovimiento()">Registrar Movimiento</button>
 </div>
 
 <div id="resultado"></div>
 
-<script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJLY4iMA7N9OFkaEmNT-ssfgXTI1mZ9D7cwj9fz1V5lp3C43yQW7PcD1G85J94e5zl/exec";
-let ultimoCodigo = "";
+<h2>Dashboard de Inventario</h2>
+<div id="dashboard">
+<button onclick="cargarDashboard()">Actualizar Dashboard</button>
+<table id="tablaDashboard">
+<tr><th>Código</th><th>Nombre</th><th>Stock Actual</th><th>Alerta</th></tr>
+</table>
+</div>
 
-function onScanSuccess(decodedText) {
-  ultimoCodigo = decodedText;
-  document.getElementById("formulario").style.display = "block";
-  document.getElementById("resultado").innerText = "Código escaneado: " + decodedText;
+<script>
+const SCRIPT_URL="https://script.google.com/macros/s/AKfycbwKTeTLTciHShcp4bCdHM_15Yg0GBYnDqQudsPXNnYp2_CxgarpE6Ld9r-VtQcK5ut7/exec"; // reemplaza por tu Apps Script
+let ultimoCodigo="";
+
+function onScanSuccess(decodedText){
+    ultimoCodigo = decodedText;
+    document.getElementById("formulario").style.display="block";
+    document.getElementById("resultado").innerText="Código escaneado: "+decodedText;
 }
 
-var html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+var html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
 html5QrcodeScanner.render(onScanSuccess);
 
-function registrarMovimiento() {
-  const tipo = document.getElementById("tipo").value;
-  const cantidad = document.getElementById("cantidad").value;
-  const ot = document.getElementById("ot").value;
-  const comentario = document.getElementById("comentario").value;
-  const usuario_id = document.getElementById("usuario_id").value || "op01";
+function registrarMovimiento(){
+    fetch(`${SCRIPT_URL}?codigo=${ultimoCodigo}&tipo=${document.getElementById("tipo").value}&cantidad=${document.getElementById("cantidad").value}&usuario_id=${document.getElementById("usuario_id").value}&orden_trabajo=${document.getElementById("ot").value}&comentario=${document.getElementById("comentario").value}`)
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.error) document.getElementById("resultado").innerText=data.error;
+        else document.getElementById("resultado").innerText=`Recambio: ${data.nombre}\nStock: ${data.stock_actual}\nAlerta: ${data.alerta}`;
+        document.getElementById("formulario").style.display="none";
+        cargarDashboard();
+    }).catch(err=>alert("Error: "+err));
+}
 
-  fetch(`${SCRIPT_URL}?codigo=${ultimoCodigo}&tipo=${tipo}&cantidad=${cantidad}&usuario_id=${usuario_id}&orden_trabajo=${ot}&comentario=${comentario}`)
-    .then(res => res.json())
-    .then(data => {
-      if(data.error) {
-        document.getElementById("resultado").innerText = data.error;
-      } else {
-        document.getElementById("resultado").innerText =
-          `Recambio: ${data.nombre}\nStock actual: ${data.stock_actual}`;
-      }
-      document.getElementById("formulario").style.display = "none";
-    })
-    .catch(err => alert("Error: " + err));
+function cargarDashboard(){
+    fetch(`${SCRIPT_URL}?dashboard=true`).then(res=>res.json()).then(data=>{
+        const tabla=document.getElementById("tablaDashboard");
+        tabla.innerHTML="<tr><th>Código</th><th>Nombre</th><th>Stock Actual</th><th>Alerta</th></tr>";
+        data.forEach(r=>{
+            let fila=tabla.insertRow();
+            fila.insertCell(0).innerText=r.codigo;
+            fila.insertCell(1).innerText=r.nombre;
+            fila.insertCell(2).innerText=r.stock_actual;
+            fila.insertCell(3).innerText=r.alerta;
+        });
+    });
 }
 </script>
 
