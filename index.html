@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Escáner de Recambios Profesional</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #reader { width: 100%; max-width: 400px; margin: auto; }
+    #resultado { margin-top: 10px; white-space: pre-line; }
+    #formulario { display: none; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>Escanear código de recambio</h2>
+
+<div id="reader"></div>
+
+<div id="formulario">
+  <label>Tipo:</label>
+  <select id="tipo">
+    <option value="entrada">Entrada</option>
+    <option value="salida">Salida</option>
+  </select><br><br>
+
+  <label>Cantidad:</label>
+  <input type="number" id="cantidad" value="1"><br><br>
+
+  <label>Orden de Trabajo:</label>
+  <input type="text" id="ot"><br><br>
+
+  <label>Comentario:</label>
+  <input type="text" id="comentario"><br><br>
+
+  <label>Usuario:</label>
+  <input type="text" id="usuario_id" placeholder="Ej: op01"><br><br>
+
+  <button onclick="registrarMovimiento()">Registrar</button>
+</div>
+
+<div id="resultado"></div>
+
+<script>
+const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT";
+let ultimoCodigo = "";
+
+function onScanSuccess(decodedText) {
+  ultimoCodigo = decodedText;
+  document.getElementById("formulario").style.display = "block";
+  document.getElementById("resultado").innerText = "Código escaneado: " + decodedText;
+}
+
+var html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+html5QrcodeScanner.render(onScanSuccess);
+
+function registrarMovimiento() {
+  const tipo = document.getElementById("tipo").value;
+  const cantidad = document.getElementById("cantidad").value;
+  const ot = document.getElementById("ot").value;
+  const comentario = document.getElementById("comentario").value;
+  const usuario_id = document.getElementById("usuario_id").value || "op01";
+
+  fetch(`${SCRIPT_URL}?codigo=${ultimoCodigo}&tipo=${tipo}&cantidad=${cantidad}&usuario_id=${usuario_id}&orden_trabajo=${ot}&comentario=${comentario}`)
+    .then(res => res.json())
+    .then(data => {
+      if(data.error) {
+        document.getElementById("resultado").innerText = data.error;
+      } else {
+        document.getElementById("resultado").innerText =
+          `Recambio: ${data.nombre}\nStock actual: ${data.stock_actual}`;
+      }
+      document.getElementById("formulario").style.display = "none";
+    })
+    .catch(err => alert("Error: " + err));
+}
+</script>
+
+</body>
+</html>
