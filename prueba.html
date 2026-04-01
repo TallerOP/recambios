@@ -1,73 +1,214 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Inventario Profesional</title>
+<title>Gestión de recambios OP Mobility Pedrola</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
-body{font-family:Arial;margin:20px;}
-#reader{width:100%;max-width:400px;margin:auto;}
-#resultado,#dashboard{margin-top:20px;}
-table,th,td{border:1px solid #ccc;border-collapse:collapse;padding:5px;}
+/* Fondo y tipografía */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to bottom, #f0f4f8, #d9e2ec);
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
+/* Encabezados */
+h2 {
+    text-align: center;
+    color: #1f2937;
+    font-size: 2em;
+    margin-bottom: 20px;
+}
+
+/* Escáner */
+#reader {
+    width: 100%;
+    max-width: 450px;
+    margin: 0 auto 20px auto;
+    border: 2px solid #3b82f6;
+    border-radius: 10px;
+}
+
+/* Formulario */
+#formulario {
+    display: none;
+    max-width: 500px;
+    margin: 0 auto 20px auto;
+    padding: 20px;
+    background-color: #ffffffdd;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#formulario label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+#formulario input, #formulario select {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+#formulario button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1.2em;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s;
+}
+
+#formulario button:hover {
+    background-color: #2563eb;
+}
+
+/* Resultado */
+#resultado {
+    text-align: center;
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+
+/* Dashboard */
+#dashboard {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+#dashboard button {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    font-size: 1.1em;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: background-color 0.3s;
+}
+
+#dashboard button:hover {
+    background-color: #059669;
+}
+
+#tablaDashboard {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.05em;
+    background-color: #ffffffdd;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#tablaDashboard th, #tablaDashboard td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+}
+
+#tablaDashboard th {
+    background-color: #3b82f6;
+    color: white;
+    font-size: 1.1em;
+}
+
+#tablaDashboard tr:nth-child(even) {
+    background-color: #f3f4f6;
+}
+
 </style>
 </head>
 <body>
 
-<h2>Escanear código</h2>
+<h2>Escanear Recambios</h2>
 <div id="reader"></div>
 
-<div id="formulario" style="display:none">
-Tipo: <select id="tipo"><option value="entrada">Entrada</option><option value="salida">Salida</option></select><br>
-Cantidad: <input type="number" id="cantidad" value="1"><br>
-OT: <input type="text" id="ot"><br>
-Comentario: <input type="text" id="comentario"><br>
-Usuario: <input type="text" id="usuario_id" placeholder="op01"><br>
-<button onclick="registrarMovimiento()">Registrar</button>
+<div id="formulario">
+    <label>Tipo:</label>
+    <select id="tipo">
+        <option value="entrada">Entrada</option>
+        <option value="salida">Salida</option>
+    </select>
+
+    <label>Cantidad:</label>
+    <input type="number" id="cantidad" value="1">
+
+    <label>Orden de Trabajo:</label>
+    <input type="text" id="ot">
+
+    <label>Comentario:</label>
+    <input type="text" id="comentario">
+
+    <label>Usuario:</label>
+    <input type="text" id="usuario_id" placeholder="op01">
+
+    <button onclick="registrarMovimiento()">Registrar Movimiento</button>
 </div>
 
 <div id="resultado"></div>
 
-<h2>Dashboard</h2>
+<h2>Dashboard de Inventario</h2>
 <div id="dashboard">
-<button onclick="cargarDashboard()">Actualizar</button>
-<table id="tablaDashboard"><tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Alerta</th></tr></table>
+    <button onclick="cargarDashboard()">Actualizar Dashboard</button>
+    <table id="tablaDashboard">
+        <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Stock Actual</th>
+            <th>Alerta</th>
+        </tr>
+    </table>
 </div>
 
 <script>
-const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT"; // reemplaza con la URL de Apps Script
+const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT"; // Reemplaza con tu Apps Script
 let ultimoCodigo="";
 
 function onScanSuccess(decodedText){
-  ultimoCodigo = decodedText;
-  document.getElementById("formulario").style.display="block";
-  document.getElementById("resultado").innerText="Código escaneado: "+decodedText;
+    ultimoCodigo = decodedText;
+    document.getElementById("formulario").style.display="block";
+    document.getElementById("resultado").innerText="Código escaneado: "+decodedText;
 }
 
-var html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
+var html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
 html5QrcodeScanner.render(onScanSuccess);
 
 function registrarMovimiento(){
-  fetch(`${SCRIPT_URL}?codigo=${ultimoCodigo}&tipo=${document.getElementById("tipo").value}&cantidad=${document.getElementById("cantidad").value}&usuario_id=${document.getElementById("usuario_id").value}&orden_trabajo=${document.getElementById("ot").value}&comentario=${document.getElementById("comentario").value}`)
-  .then(res=>res.json())
-  .then(data=>{
-    if(data.error) document.getElementById("resultado").innerText=data.error;
-    else document.getElementById("resultado").innerText=`Recambio: ${data.nombre}\nStock: ${data.stock_actual}\nAlerta: ${data.alerta}`;
-    document.getElementById("formulario").style.display="none";
-    cargarDashboard();
-  }).catch(err=>alert("Error: "+err));
+    fetch(`${SCRIPT_URL}?codigo=${ultimoCodigo}&tipo=${document.getElementById("tipo").value}&cantidad=${document.getElementById("cantidad").value}&usuario_id=${document.getElementById("usuario_id").value}&orden_trabajo=${document.getElementById("ot").value}&comentario=${document.getElementById("comentario").value}`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.error) document.getElementById("resultado").innerText = data.error;
+        else document.getElementById("resultado").innerText=`Recambio: ${data.nombre}\nStock: ${data.stock_actual}\nAlerta: ${data.alerta}`;
+        document.getElementById("formulario").style.display="none";
+        cargarDashboard();
+    }).catch(err=>alert("Error: "+err));
 }
 
 function cargarDashboard(){
-  fetch(`${SCRIPT_URL}?dashboard=true`).then(res=>res.json()).then(data=>{
-    const tabla=document.getElementById("tablaDashboard");
-    tabla.innerHTML="<tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Alerta</th></tr>";
-    data.forEach(r=>{
-      let fila=tabla.insertRow();
-      fila.insertCell(0).innerText=r.codigo;
-      fila.insertCell(1).innerText=r.nombre;
-      fila.insertCell(2).innerText=r.stock_actual;
-      fila.insertCell(3).innerText=r.alerta;
+    fetch(`${SCRIPT_URL}?dashboard=true`).then(res=>res.json()).then(data=>{
+        const tabla=document.getElementById("tablaDashboard");
+        tabla.innerHTML="<tr><th>Código</th><th>Nombre</th><th>Stock Actual</th><th>Alerta</th></tr>";
+        data.forEach(r=>{
+            let fila=tabla.insertRow();
+            fila.insertCell(0).innerText=r.codigo;
+            fila.insertCell(1).innerText=r.nombre;
+            fila.insertCell(2).innerText=r.stock_actual;
+            fila.insertCell(3).innerText=r.alerta;
+        });
     });
-  });
 }
 </script>
 
