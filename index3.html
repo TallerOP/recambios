@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario</title>
+
+<style>
+body { font-family: system-ui; background:#0f172a; color:white; margin:0; }
+.container { max-width:500px; margin:auto; padding:16px; }
+.card { background:#1e293b; padding:16px; border-radius:12px; margin-bottom:12px; }
+input, select, button { width:100%; padding:14px; font-size:18px; margin-top:8px; border-radius:10px; border:none; }
+button { font-weight:bold; }
+.in { background:#22c55e; }
+.out { background:#ef4444; }
+.status { text-align:center; margin-top:10px; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>📦 Inventario</h2>
+
+<div class="card">
+  <label>Usuario</label>
+  <select id="usuario"></select>
+</div>
+
+<div class="card">
+  <input id="barcode" placeholder="Escanear código..." autofocus>
+</div>
+
+<div class="card" id="producto" style="display:none;">
+  <h3 id="nombre"></h3>
+  <p id="stock"></p>
+
+  <button class="in" onclick="mov('IN')">➕ Entrada</button>
+  <button class="out" onclick="mov('OUT')">➖ Salida</button>
+</div>
+
+<div class="status" id="status"></div>
+
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbx6g5BnZwlJfQC9ccG4jWETZAmlyMQ_WRsrLOToKU5y2SsN1mhRKb4HPMLQOqIR4tPE/exec"; // ← TU URL REAL
+const TOKEN = "MI_TOKEN";
+
+let current = null;
+
+// ==================
+// USUARIOS
+// ==================
+const usuarios = ["Operario1","Operario2","Supervisor"];
+const sel = document.getElementById("usuario");
+
+usuarios.forEach(u=>{
+  let o=document.createElement("option");
+  o.value=u; o.textContent=u;
+  sel.appendChild(o);
+});
+
+const saved = localStorage.getItem("user");
+if(saved) sel.value=saved;
+
+sel.onchange=()=>localStorage.setItem("user",sel.value);
+
+// ==================
+// ESCANEAR
+// ==================
+document.getElementById("barcode").addEventListener("change", async e=>{
+  const code = e.target.value.trim();
+  if(!code) return;
+
+  setStatus("Buscando...");
+
+  try{
+    const res = await fetch(`${API}?action=producto&id=${code}&token=${TOKEN}`);
+    const data = await res.json();
+
+    if(!data.ok) throw new Error(data.error);
+
+    current = data.data;
+
+    nombre.textContent = current.nombre;
+    stock.textContent = "Stock: " + current.stock;
+    producto.style.display = "block";
+
+    ok("Producto cargado");
+
+  }catch(err){
+    fail(err.message);
+  }
+
+  e.target.value="";
+});
+
+// ==================
+// MOVIMIENTO
+// ==================
+async function mov(tipo){
+  if(!current) return;
+
+  const cantidad = parseInt(prompt("Cantidad",1));
+  if(!cantidad) return;
+
+  setStatus("Enviando...");
+
+  try{
+    const res = await fetch(API, {
+      method:"POST",
+      headers:{
+        "Content-Type":"text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({
+        token:TOKEN,
+        action:"movimiento",
+        producto_id: current.id,
+        tipo,
+        cantidad,
+        usuario: sel.value
+      })
+    });
+
+    const data = await res.json();
+
+    if(!data.ok) throw new Error(data.error);
+
+    stock.textContent = "Stock: " + data.data.stock;
+
+    ok("OK ✔");
+
+  }catch(err){
+    fail(err.message);
+  }
+}
+
+// ==================
+// UX
+// ==================
+function setStatus(msg){
+  status.textContent = msg;
+  status.style.color="white";
+}
+
+function ok(msg){
+  status.textContent = msg;
+  status.style.color="#22c55e";
+  beep();
+}
+
+function fail(msg){
+  status.textContent = msg;
+  status.style.color="#ef4444";
+  vibrate();
+}
+
+function beep(){
+  try{
+    const ctx=new AudioContext();
+    const osc=ctx.createOscillator();
+    osc.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime+0.1);
+  }catch{}
+}
+
+function vibrate(){
+  if(navigator.vibrate) navigator.vibrate(200);
+}
+</script>
+
+</body>
+</html>
