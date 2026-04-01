@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventario</title>
 
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
-body { font-family: system-ui; background:#0f172a; color:white; margin:0; }
+body { margin:0; font-family:system-ui; background:#0f172a; color:white; }
 .container { max-width:500px; margin:auto; padding:16px; }
 .card { background:#1e293b; padding:16px; border-radius:12px; margin-bottom:12px; }
-input, select, button { width:100%; padding:14px; font-size:18px; margin-top:8px; border-radius:10px; border:none; }
-button { font-weight:bold; }
+button { width:100%; padding:16px; font-size:18px; margin-top:10px; border:none; border-radius:10px; }
 .in { background:#22c55e; }
 .out { background:#ef4444; }
-.status { text-align:center; margin-top:10px; }
+#reader { width:100%; border-radius:10px; overflow:hidden; }
 </style>
 </head>
 
@@ -29,7 +30,7 @@ button { font-weight:bold; }
 </div>
 
 <div class="card">
-  <input id="barcode" placeholder="Escanear código..." autofocus>
+  <div id="reader"></div>
 </div>
 
 <div class="card" id="producto" style="display:none;">
@@ -40,43 +41,61 @@ button { font-weight:bold; }
   <button class="out" onclick="mov('OUT')">➖ Salida</button>
 </div>
 
-<div class="status" id="status"></div>
+<div id="status"></div>
 
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbx6g5BnZwlJfQC9ccG4jWETZAmlyMQ_WRsrLOToKU5y2SsN1mhRKb4HPMLQOqIR4tPE/exec"; // ← TU URL REAL
+const API = "https://script.google.com/macros/s/AKfycbx6g5BnZwlJfQC9ccG4jWETZAmlyMQ_WRsrLOToKU5y2SsN1mhRKb4HPMLQOqIR4tPE/exec";
 const TOKEN = "MI_TOKEN";
 
 let current = null;
+let scanning = true;
 
-// ==================
+// =================
 // USUARIOS
-// ==================
-const usuarios = ["Operario1","Operario2","Supervisor"];
+// =================
+const users = ["Operario1","Operario2","Supervisor"];
 const sel = document.getElementById("usuario");
 
-usuarios.forEach(u=>{
+users.forEach(u=>{
   let o=document.createElement("option");
   o.value=u; o.textContent=u;
   sel.appendChild(o);
 });
 
 const saved = localStorage.getItem("user");
-if(saved) sel.value=saved;
+if(saved) sel.value = saved;
 
-sel.onchange=()=>localStorage.setItem("user",sel.value);
+sel.onchange = ()=>localStorage.setItem("user", sel.value);
 
-// ==================
-// ESCANEAR
-// ==================
-document.getElementById("barcode").addEventListener("change", async e=>{
-  const code = e.target.value.trim();
-  if(!code) return;
+// =================
+// ESCÁNER
+// =================
+function onScanSuccess(code) {
+  if (!scanning) return;
 
+  scanning = false;
+  buscarProducto(code);
+}
+
+const scanner = new Html5Qrcode("reader");
+
+Html5Qrcode.getCameras().then(devices => {
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    onScanSuccess
+  );
+});
+
+// =================
+// API
+// =================
+async function buscarProducto(code){
   setStatus("Buscando...");
 
-  try{
+  try {
     const res = await fetch(`${API}?action=producto&id=${code}&token=${TOKEN}`);
     const data = await res.json();
 
@@ -86,20 +105,20 @@ document.getElementById("barcode").addEventListener("change", async e=>{
 
     nombre.textContent = current.nombre;
     stock.textContent = "Stock: " + current.stock;
+
     producto.style.display = "block";
 
-    ok("Producto cargado");
+    ok("Producto detectado");
 
-  }catch(err){
+  } catch(err) {
     fail(err.message);
+    scanning = true;
   }
+}
 
-  e.target.value="";
-});
-
-// ==================
+// =================
 // MOVIMIENTO
-// ==================
+// =================
 async function mov(tipo){
   if(!current) return;
 
@@ -108,12 +127,10 @@ async function mov(tipo){
 
   setStatus("Enviando...");
 
-  try{
-    const res = await fetch(API, {
+  try {
+    const res = await fetch(API,{
       method:"POST",
-      headers:{
-        "Content-Type":"text/plain;charset=utf-8"
-      },
+      headers:{ "Content-Type":"text/plain" },
       body: JSON.stringify({
         token:TOKEN,
         action:"movimiento",
@@ -132,30 +149,22 @@ async function mov(tipo){
 
     ok("OK ✔");
 
-  }catch(err){
+    // volver a escanear automáticamente
+    current = null;
+    producto.style.display = "none";
+    scanning = true;
+
+  } catch(err){
     fail(err.message);
   }
 }
 
-// ==================
+// =================
 // UX
-// ==================
-function setStatus(msg){
-  status.textContent = msg;
-  status.style.color="white";
-}
-
-function ok(msg){
-  status.textContent = msg;
-  status.style.color="#22c55e";
-  beep();
-}
-
-function fail(msg){
-  status.textContent = msg;
-  status.style.color="#ef4444";
-  vibrate();
-}
+// =================
+function setStatus(msg){ status.innerText = msg; }
+function ok(msg){ status.innerText = msg; status.style.color="lime"; beep(); }
+function fail(msg){ status.innerText = msg; status.style.color="red"; vibrate(); }
 
 function beep(){
   try{
